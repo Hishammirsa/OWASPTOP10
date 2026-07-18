@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OWASP Top 10 (2021) — Vulnerability Testing Machine</title>
+<style>
+    :root{
+        --bg:#1e1e2e;
+        --panel:#2e2e3e;
+        --accent:#4caf50;
+        --accent-dark:#45a049;
+        --danger:#de8d8d;
+        --text:#f2f2f2;
+        --muted:#9a9aa8;
+    }
+    *{box-sizing:border-box;}
+    body{
+        margin:0;
+        font-family:Arial, sans-serif;
+        background:var(--bg);
+        color:var(--text);
+        display:flex;
+        min-height:100vh;
+    }
+    /* ---------- SIDEBAR ---------- */
+    .sidebar{
+        width:280px;
+        min-width:280px;
+        background:#171722;
+        padding:20px;
+        height:100vh;
+        overflow-y:auto;
+        position:sticky;
+        top:0;
+        border-right:1px solid #33334a;
+    }
+    .sidebar h1{
+        font-size:18px;
+        margin:0 0 4px 0;
+    }
+    .sidebar .sub{
+        color:var(--muted);
+        font-size:12px;
+        margin-bottom:18px;
+    }
+    .sidebar ul{list-style:none;padding:0;margin:0;}
+    .sidebar li{
+        padding:12px 10px;
+        border-radius:6px;
+        margin-bottom:6px;
+        cursor:pointer;
+        font-size:14px;
+        border:1px solid transparent;
+        transition:.2s;
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+    }
+    .sidebar li:hover{background:#26263a;}
+    .sidebar li.active{
+        background:var(--accent);
+        color:#0c1a0c;
+        font-weight:bold;
+    }
+    .badge{
+        font-size:10px;
+        padding:2px 8px;
+        border-radius:10px;
+        background:var(--danger);
+        color:#fff;
+        font-weight:bold;
+    }
+    .badge.solved{
+        background:var(--accent-dark);
+        animation:blink 1.2s infinite;
+    }
+    @keyframes blink{0%{opacity:1;}50%{opacity:.45;}100%{opacity:1;}}
+
+    .progress-wrap{
+        margin-top:20px;
+        padding-top:14px;
+        border-top:1px solid #33334a;
+        font-size:12px;
+        color:var(--muted);
+    }
+    .progress-bar{
+        width:100%;
+        height:8px;
+        background:#0c0c14;
+        border-radius:10px;
+        overflow:hidden;
+        margin-top:6px;
+    }
+    .progress-fill{
+        height:100%;
+        background:var(--accent);
+        width:0%;
+        transition:width .4s;
+    }
+
+    /* ---------- MAIN ---------- */
+    .main{
+        flex-grow:1;
+        padding:30px 40px;
+        max-width:1000px;
+    }
+    .lab{display:none;}
+    .lab.active{display:block;animation:fade .3s;}
+    @keyframes fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+
+    .lab-header{
+        display:flex;
+        justify-content:space-between;
+        align-items:flex-start;
+        margin-bottom:14px;
+        gap:20px;
+    }
+    .lab-header h2{margin:0 0 6px 0;}
+    .status-box{
+        background:var(--danger);
+        color:white;
+        padding:8px 18px;
+        border-radius:20px;
+        font-weight:bold;
+        white-space:nowrap;
+        font-size:13px;
+    }
+    .status-box.solved{
+        background:var(--accent);
+        animation:blink 1s infinite;
+    }
+    .note{
+        background:#26263a;
+        border-left:3px solid var(--accent);
+        padding:12px 16px;
+        border-radius:6px;
+        font-size:13px;
+        color:var(--muted);
+        margin-bottom:20px;
+    }
+
+    .url-bar-container{
+        display:flex;
+        align-items:center;
+        margin-bottom:20px;
+        gap:10px;
+    }
+    .url-bar{
+        flex-grow:1;
+        background:var(--panel);
+        padding:10px 14px;
+        border-radius:25px;
+        border:2px solid transparent;
+        color:white;
+        font-size:14px;
+        outline:none;
+    }
+    .url-bar:focus{border:2px solid var(--accent);}
+    .btn, .search-button{
+        background:var(--accent);
+        color:white;
+        padding:10px 18px;
+        border:none;
+        border-radius:20px;
+        cursor:pointer;
+        font-size:14px;
+        font-weight:bold;
+    }
+    .btn:hover, .search-button:hover{background:var(--accent-dark);}
+    .btn.secondary{background:#44445c;}
+    .btn.secondary:hover{background:#55557a;}
+
+    .card{
+        background:var(--panel);
+        padding:22px;
+        border-radius:10px;
+        box-shadow:0 0 10px rgba(0,0,0,.4);
+        margin-bottom:16px;
+    }
+    input[type=text], input[type=password], input[type=email], input[type=file]{
+        width:100%;
+        padding:10px;
+        margin:8px 0;
+        border:none;
+        border-radius:5px;
+        background:#111119;
+        color:white;
+        border:1px solid #3a3a52;
+    }
+    label{font-size:13px;color:var(--muted);}
+    .output{min-height:18px;font-size:13px;margin-top:6px;}
+    .output.error{color:#ff8080;}
+    .output.success{color:#7be495;}
+
+    pre.leak{
+        background:#111119;
+        padding:14px;
+        border-radius:6px;
+        overflow-x:auto;
+        font-size:12px;
+        line-height:1.5;
+        max-height:260px;
+        overflow-y:auto;
+        color:#9be59b;
+        display:none;
+    }
+    .flag{
+        display:none;
+        margin-top:14px;
+        background:#111119;
+        border:1px dashed var(--accent);
+        padding:12px;
+        border-radius:6px;
+        font-family:monospace;
+        color:#9be59b;
+        word-break:break-all;
+    }
+    .hint-toggle{
+        font-size:12px;
+        color:var(--accent);
+        cursor:pointer;
+        text-decoration:underline;
+        margin-top:8px;
+        display:inline-block;
+    }
+    .hint-body{display:none;font-size:12px;color:var(--muted);margin-top:6px;}
+    .step{display:none;}
+    .step.active{display:block;}
+
+    .attempts{font-size:12px;color:var(--muted);margin-top:6px;}
+</style>
+</head>
+<body>
+
+<!-- ================= SIDEBAR ================= -->
+<div class="sidebar">
+    <h1>OWASP Top 10 <span style="color:var(--accent)">(2021)</span></h1>
+    <div class="sub">Local Vulnerability Testing Machine — self-contained, single-file lab set for offline / localhost practice.</div>
+    <ul id="navList">
+        <li data-lab="a01" class="active">A01 · Broken Access Control <span class="badge" id="badge-a01">Not Solved</span></li>
+        <li data-lab="a02">A02 · Cryptographic Failures <span class="badge" id="badge-a02">Not Solved</span></li>
+        <li data-lab="a03">A03 · Injection <span class="badge" id="badge-a03">Not Solved</span></li>
+        <li data-lab="a04">A04 · Insecure Design <span class="badge" id="badge-a04">Not Solved</span></li>
+        <li data-lab="a05">A05 · Security Misconfiguration <span class="badge" id="badge-a05">Not Solved</span></li>
+        <li data-lab="a06">A06 · Vulnerable &amp; Outdated Components <span class="badge" id="badge-a06">Not Solved</span></li>
+        <li data-lab="a07">A07 · Identification &amp; Auth Failures <span class="badge" id="badge-a07">Not Solved</span></li>
+        <li data-lab="a08">A08 · Software &amp; Data Integrity Failures <span class="badge" id="badge-a08">Not Solved</span></li>
+        <li data-lab="a09">A09 · Logging &amp; Monitoring Failures <span class="badge" id="badge-a09">Not Solved</span></li>
+        <li data-lab="a10">A10 · Server-Side Request Forgery (SSRF) <span class="badge" id="badge-a10">Not Solved</span></li>
+    </ul>
+    <div class="progress-wrap">
+        <span id="progressText">0 / 10 labs solved</span>
+        <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    </div>
+</div>
+
+<!-- ================= MAIN ================= -->
+<div class="main">
+
+<!-- ===== A01 Broken Access Control ===== -->
+<div class="lab active" id="lab-a01">
+    <div class="lab-header">
+        <div>
+            <h2>A01:2021 — Broken Access Control</h2>
+        </div>
+        <div class="status-box" id="status-a01">Not Solved</div>
+    </div>
+    <div class="note">Goal: log in as any user, then tamper with the <code>user=</code> parameter in the address bar to view <strong>another</strong> account's page without authorization (IDOR).</div>
+
+    <div class="step active" id="a01-step1">
+        <div class="card">
+            <h3>Bank Login</h3>
+            <label>Username</label>
+            <input type="text" id="a01-user" placeholder="Enter username">
+            <label>Password</label>
+            <input type="password" id="a01-pass" placeholder="Enter password">
+            <div><button class="btn" onclick="a01Login()">Login</button></div>
+            <div class="output error" id="a01-login-output"></div>
+            <div class="hint-toggle" onclick="toggleHint('a01h1')">show credentials hint</div>
+            <div class="hint-body" id="a01h1">username: <code>VijayKumar</code> · password: <code>Vijay2123</code></div>
+        </div>
+    </div>
+
+    <div class="step" id="a01-step2">
+        <div class="card">
+            <h3>Welcome to Internet Banking</h3>
+            <div class="url-bar-container">
+                <input type="text" class="url-bar" id="a01-url" value="https://internet-banking.com/home?user=4321">
+                <button class="search-button" onclick="a01Nav()">Go</button>
+            </div>
+            <p>You are logged in as account <b>4321</b>. Try changing the number in the URL bar to load a different account — a properly secured app should block this server-side.</p>
+            <div class="flag" id="a01-flag">🎉 IDOR confirmed — you accessed another user's account by editing <code>user=</code>. This is Broken Access Control.</div>
+            <div class="hint-toggle" onclick="toggleHint('a01h2')">show hint</div>
+            <div class="hint-body" id="a01h2">Change <code>user=4321</code> to any other number, e.g. <code>user=4322</code>, and press Go.</div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== A02 Cryptographic Failures ===== -->
+<div class="lab" id="lab-a02">
+    <div class="lab-header">
+        <div><h2>A02:2021 — Cryptographic Failures</h2></div>
+        <div class="status-box" id="status-a02">Not Solved</div>
+    </div>
+    <div class="note">Goal: discover a sensitive file left exposed on the server and recover the flag hidden inside it using weak/reversible encoding (Base64 is <em>encoding</em>, not encryption).</div>
+
+    <div class="card">
+        <h3>Bank Home</h3>
+        <div class="url-bar-container">
+            <input type="text" class="url-bar" id="a02-url" value="https://sbi.internet-banking.com/home">
+            <button class="search-button" onclick="a02Nav()">Go</button>
+        </div>
+        <div class="output" id="a02-output"></div>
+        <div class="hint-toggle" onclick="toggleHint('a02h1')">show hint</div>
+        <div class="hint-body" id="a02h1">Try navigating to <code>/robots.txt</code> first — it often reveals paths admins meant to hide, such as a leftover <code>/.data.txt</code>.</div>
+
+        <pre class="leak" id="a02-robots">
+User-agent: *
+Disallow: /admin/
+Disallow: /users/
+Disallow: /downloads/
+Disallow: /.data.txt
+Disallow: /nonsvn/
+Disallow: /webview/
+Disallow: /support/agent/
+Allow: /home/
+Allow: /login/
+        </pre>
+
+        <div class="flag" id="a02-flag">
+            Found <code>/.data.txt</code> — sensitive data stored with weak/no encryption:<br><br>
+            <span id="a02-b64">Y3J5cHRve3ZhbGxhcGFuaXl1bW5va2lwb2RhfQ==</span><br>
+            <button class="btn secondary" style="margin-top:8px" onclick="a02Decode()">Decode Base64</button>
+            <div id="a02-decoded" style="margin-top:8px;"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== A03 Injection ===== -->
+<div class="lab" id="lab-a03">
+    <div class="lab-header">
+        <div><h2>A03:2021 — Injection</h2></div>
+        <div class="status-box" id="status-a03">Not Solved</div>
+    </div>
+    <div class="note">Goal: the "Help &amp; Support" form passes raw input into a backend query with no sanitization. Enter a classic SQL-injection style payload to trigger a simulated data leak.</div>
+
+    <div class="card">
+        <h3>Help &amp; Support</h3>
+        <form onsubmit="return a03Check(event)">
+            <label>Describe your issue</label>
+            <input type="text" id="a03-issue" placeholder="Describe your problem..." required>
+            <button class="btn" type="submit">Submit</button>
+        </form>
+        <div class="output error" id="a03-output"></div>
+        <pre class="leak" id="a03-leak">-- simulated backend response --
+username           | password
+--------------------|-------------------
+demo_user01         | Demo@1234
+demo_admin02        | Admin!987
+demo_test03         | Test@5678
+demo_guest04        | Guest#2024
+demo_banking05      | Bank@Safe1
+demo_secure06       | Secure$99
+demo_hacker07       | Moha#321
+demo_root08         | Root!Access
+demo_finance09      | Flow$1234
+demo_manager10      | Manager#01
+demo_user11         | Pass@123
+demo_banker12       | Banker!987
+demo_test13         | Test@Bank24
+demo_savings14      | Save#1000
+demo_vault15        | Vault$Access
+demo_security16     | Sec!2025
+demo_customer17     | Cust@Pass
+demo_employee18     | Emp#Secure
+demo_atm19          | Atm#PIN4567
+demo_card20         | Card$Holder
+demo_transfer21     | Trans!789
+demo_account22      | Acct@2023
+demo_credentials23  | Cred#Login
+demo_online24       | Online$Bank
+demo_access27       | Access#2025
+demo_support29      | Help$987
+demo_branch31       | Branch$Code
+demo_db36           | DB#Secret567
+demo_admin38        | Admin#Panel
+(rows truncated — full dump would continue...)
+        </pre>
+    </div>
+</div>
+
+<!-- ===== A04 Insecure Design ===== -->
+<div class="lab" id="lab-a04">
+    <div class="lab-header">
+        <div><h2>A04:2021 — Insecure Design</h2></div>
+        <div class="status-box" id="status-a04">Not Solved</div>
+    </div>
+    <div class="note">Goal: the "forgot password" flow issues a predictable, unauthenticated reset link with no ownership check — a design flaw, not a coding bug.</div>
+
+    <div class="card">
+        <h3>Password Reset</h3>
+        <label>Account email</label>
+        <input type="email" id="a04-email" placeholder="any email — no verification performed">
+        <button class="btn" onclick="a04RequestReset()">Send Reset Link</button>
+        <div class="output success" id="a04-reset-output"></div>
+    </div>
+
+    <div class="card" id="a04-resetform-card" style="display:none;">
+        <h3>Reset Password</h3>
+        <p style="font-size:13px;color:var(--muted)">Notice: this page never confirmed who the email belongs to, and the "token" is the same static value for every request.</p>
+        <input type="password" id="a04-newpass" placeholder="New password">
+        <input type="password" id="a04-confirmpass" placeholder="Confirm password">
+        <button class="btn" onclick="a04Reset()">Reset Password</button>
+        <div class="flag" id="a04-flag">🎉 Password reset with no identity verification and a hardcoded token — classic Insecure Design.</div>
+    </div>
+</div>
+
+<!-- ===== A05 Security Misconfiguration ===== -->
+<div class="lab" id="lab-a05">
+    <div class="lab-header">
+        <div><h2>A05:2021 — Security Misconfiguration</h2></div>
+        <div class="status-box" id="status-a05">Not Solved</div>
+    </div>
+    <div class="note">Goal: a debug/admin panel was left enabled in production. Find it by requesting a predictable path.</div>
+
+    <div class="card">
+        <div class="url-bar-container">
+            <input type="text" class="url-bar" id="a05-url" value="https://shop.example.com/">
+            <button class="search-button" onclick="a05Nav()">Go</button>
+        </div>
+        <div class="output" id="a05-output"></div>
+        <div class="hint-toggle" onclick="toggleHint('a05h1')">show hint</div>
+        <div class="hint-body" id="a05h1">Try appending <code>/admin-console</code> or <code>/debug</code> to the URL.</div>
+        <div class="flag" id="a05-flag">🎉 Debug console exposed — stack traces, environment variables, and a default <code>admin:admin</code> login are all visible. That's a misconfiguration, not an attack.</div>
+    </div>
+</div>
+
+<!-- ===== A06 Vulnerable & Outdated Components ===== -->
+<div class="lab" id="lab-a06">
+    <div class="lab-header">
+        <div><h2>A06:2021 — Vulnerable and Outdated Components</h2></div>
+        <div class="status-box" id="status-a06">Not Solved</div>
+    </div>
+    <div class="note">Goal: inspect the page's declared dependencies and identify the one with a known public CVE.</div>
+
+    <div class="card">
+        <h3>Page Dependencies (simulated "View Source")</h3>
+        <pre class="leak" style="display:block;">
+&lt;script src="/lib/jquery-1.8.3.min.js"&gt;&lt;/script&gt;
+&lt;script src="/lib/moment-2.19.3.min.js"&gt;&lt;/script&gt;
+&lt;script src="/lib/lodash-4.17.10.min.js"&gt;&lt;/script&gt;
+        </pre>
+        <label>Which library/version below has a well-known public CVE?</label>
+        <select id="a06-select" style="width:100%;padding:10px;border-radius:5px;margin-top:8px;">
+            <option value="">-- select --</option>
+            <option value="jquery">jQuery 1.8.3</option>
+            <option value="moment">Moment 2.19.3</option>
+            <option value="lodash">Lodash 4.17.10</option>
+        </select>
+        <button class="btn" style="margin-top:10px" onclick="a06Check()">Check</button>
+        <div class="output error" id="a06-output"></div>
+        <div class="flag" id="a06-flag">🎉 Correct — jQuery &lt; 3.5.0 has multiple documented XSS CVEs. Shipping known-vulnerable, unpatched libraries is exactly this category.</div>
+    </div>
+</div>
+
+<!-- ===== A07 Identification & Authentication Failures ===== -->
+<div class="lab" id="lab-a07">
+    <div class="lab-header">
+        <div><h2>A07:2021 — Identification and Authentication Failures</h2></div>
+        <div class="status-box" id="status-a07">Not Solved</div>
+    </div>
+    <div class="note">Goal: log in with weak, guessable credentials, then bypass OTP verification because the app accepts <strong>any</strong> 4–6 digit code with no real validation, rate limiting, or expiry.</div>
+
+    <div class="step active" id="a07-step1">
+        <div class="card">
+            <h3>Login</h3>
+            <input type="text" id="a07-user" placeholder="Username">
+            <input type="password" id="a07-pass" placeholder="Password">
+            <button class="btn" onclick="a07Login()">Login</button>
+            <div class="output error" id="a07-login-output"></div>
+            <div class="hint-toggle" onclick="toggleHint('a07h1')">show credentials hint</div>
+            <div class="hint-body" id="a07h1">username: <code>abhishek</code> · password: <code>abhishek123</code></div>
+        </div>
+    </div>
+    <div class="step" id="a07-step2">
+        <div class="card">
+            <h3>OTP Verification</h3>
+            <p style="font-size:13px;color:var(--muted)">Enter <em>any</em> code — there is no server-side check, no expiry, and no lockout.</p>
+            <input type="text" id="a07-otp" placeholder="Enter any OTP e.g. 000000">
+            <button class="btn" onclick="a07Verify()">Verify OTP</button>
+            <div class="flag" id="a07-flag">🎉 OTP accepted with zero validation — account takeover is trivial. This is an Authentication Failure.</div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== A08 Software and Data Integrity Failures ===== -->
+<div class="lab" id="lab-a08">
+    <div class="lab-header">
+        <div><h2>A08:2021 — Software and Data Integrity Failures</h2></div>
+        <div class="status-box" id="status-a08">Not Solved</div>
+    </div>
+    <div class="note">Goal: a third-party "sponsored ad" on the storefront links straight to a downloadable file with no signature or checksum verification — exactly how tampered installers get distributed.</div>
+
+    <div class="card">
+        <h3>Storefront</h3>
+        <p>Sponsored ad:</p>
+        <div style="border:1px dashed var(--danger);padding:16px;border-radius:8px;display:inline-block;cursor:pointer;" onclick="a08Click()">
+            📦 "Free Productivity Toolkit — Download Now"
+        </div>
+        <div class="output" id="a08-output"></div>
+        <div class="flag" id="a08-flag">🎉 The download was served over an unverified third-party link with no code signature or checksum check — the app trusted the file's origin blindly. That's a Software/Data Integrity Failure.<br><br>
+        <span style="font-size:12px;color:var(--muted);">(In this lab no real file is fetched — in a live pentest environment you'd confirm this by checking response headers/signatures, never by actually executing an untrusted download.)</span></div>
+    </div>
+</div>
+
+<!-- ===== A09 Logging and Monitoring Failures ===== -->
+<div class="lab" id="lab-a09">
+    <div class="lab-header">
+        <div><h2>A09:2021 — Security Logging and Monitoring Failures</h2></div>
+        <div class="status-box" id="status-a09">Not Solved</div>
+    </div>
+    <div class="note">Goal: brute-force the login. Notice there is no lockout, no CAPTCHA, no delay, and no visible alert after repeated failures — meaning an attacker could do this for hours undetected.</div>
+
+    <div class="card">
+        <h3>Steam-style Login</h3>
+        <input type="text" id="a09-user" placeholder="Username">
+        <input type="password" id="a09-pass" placeholder="Password">
+        <button class="btn" onclick="a09Login()">Sign In</button>
+        <div class="output error" id="a09-output"></div>
+        <div class="attempts" id="a09-attempts">Failed attempts so far: 0 (no lockout triggered, no alert raised)</div>
+        <div class="hint-toggle" onclick="toggleHint('a09h1')">show credentials hint</div>
+        <div class="hint-body" id="a09h1">username: <code>Anonymous</code> · password: <code>Anonymous123</code> — but try a few wrong guesses first to see nothing blocks you.</div>
+        <div class="flag" id="a09-flag">🎉 Logged in after multiple failed attempts with zero detection, alerting, or lockout — a textbook Logging &amp; Monitoring Failure.</div>
+    </div>
+</div>
+
+<!-- ===== A10 Server-Side Request Forgery (SSRF) ===== -->
+<div class="lab" id="lab-a10">
+    <div class="lab-header">
+        <div><h2>A10:2021 — Server-Side Request Forgery (SSRF)</h2></div>
+        <div class="status-box" id="status-a10">Not Solved</div>
+    </div>
+    <div class="note">Goal (informational level): a "profile picture from URL" feature fetches whatever URL you give it, server-side, with no restriction on the destination. Point it at an internal-only address instead of a real image, and the server will happily fetch it for you.</div>
+
+    <div class="card">
+        <h3>Import Profile Picture from URL</h3>
+        <label>Image URL</label>
+        <div class="url-bar-container">
+            <input type="text" class="url-bar" id="a10-url" placeholder="https://example.com/photo.jpg">
+            <button class="search-button" onclick="a10Fetch()">Fetch</button>
+        </div>
+        <div class="output" id="a10-output"></div>
+        <div class="hint-toggle" onclick="toggleHint('a10h1')">show hint</div>
+        <div class="hint-body" id="a10h1">
+            The server has no allow-list, so it will fetch internal/private addresses just like a public one. Try one of:<br>
+            <code>http://127.0.0.1/admin</code> · <code>http://localhost:8080/</code> · <code>http://169.254.169.254/latest/meta-data/</code> (cloud metadata endpoint) · <code>file:///etc/passwd</code>
+        </div>
+
+        <pre class="leak" id="a10-leak"></pre>
+        <div class="flag" id="a10-flag">🎉 The server fetched an internal resource on your behalf. In a real environment this can expose internal admin panels, cloud credentials, or local files — because the app trusted a user-supplied URL as if it were safe. That's SSRF.<br><br>
+        <span style="font-size:12px;color:var(--muted);">Mitigations: allow-list external destinations only, block requests to private/link-local IP ranges and the <code>file://</code>/<code>gopher://</code> schemes, and never let user input decide what the server connects to.</span></div>
+    </div>
+</div>
+
+</div><!-- /main -->
+
+<script>
+/* ---------------- NAV ---------------- */
+const solved = {a01:false,a02:false,a03:false,a04:false,a05:false,a06:false,a07:false,a08:false,a09:false,a10:false};
+
+document.getElementById('navList').addEventListener('click', e=>{
+    const li = e.target.closest('li');
+    if(!li) return;
+    document.querySelectorAll('.sidebar li').forEach(x=>x.classList.remove('active'));
+    li.classList.add('active');
+    const id = li.dataset.lab;
+    document.querySelectorAll('.lab').forEach(x=>x.classList.remove('active'));
+    document.getElementById('lab-'+id).classList.add('active');
+});
+
+function toggleHint(id){
+    const el = document.getElementById(id);
+    el.style.display = (el.style.display === 'block') ? 'none' : 'block';
+}
+
+function markSolved(id){
+    if(solved[id]) return;
+    solved[id] = true;
+    document.getElementById('status-'+id).innerText = 'Solved';
+    document.getElementById('status-'+id).classList.add('solved');
+    document.getElementById('badge-'+id).innerText = 'Solved';
+    document.getElementById('badge-'+id).classList.add('solved');
+    updateProgress();
+}
+
+function updateProgress(){
+    const total = Object.keys(solved).length;
+    const done = Object.values(solved).filter(Boolean).length;
+    document.getElementById('progressText').innerText = done + ' / ' + total + ' labs solved';
+    document.getElementById('progressFill').style.width = (done/total*100) + '%';
+}
+
+/* ---------------- A01 Broken Access Control ---------------- */
+function a01Login(){
+    const u = document.getElementById('a01-user').value;
+    const p = document.getElementById('a01-pass').value;
+    if(u === 'VijayKumar' && p === 'Vijay2123'){
+        document.getElementById('a01-step1').classList.remove('active');
+        document.getElementById('a01-step2').classList.add('active');
+    } else {
+        document.getElementById('a01-login-output').innerText = 'Invalid username or password.';
+    }
+}
+function a01Nav(){
+    const val = document.getElementById('a01-url').value.trim();
+    const m = val.match(/user=(\d+)/);
+    if(m && m[1] !== '4321'){
+        document.getElementById('a01-flag').style.display = 'block';
+        markSolved('a01');
+    }
+}
+
+/* ---------------- A02 Cryptographic Failures ---------------- */
+function a02Nav(){
+    const val = document.getElementById('a02-url').value.trim().toLowerCase();
+    const out = document.getElementById('a02-output');
+    if(val.endsWith('/robots.txt')){
+        out.innerText = 'robots.txt found:';
+        document.getElementById('a02-robots').style.display = 'block';
+    } else if(val.endsWith('/.data.txt')){
+        out.innerText = 'Exposed file found:';
+        document.getElementById('a02-flag').style.display = 'block';
+        markSolved('a02');
+    } else {
+        out.innerText = '404 — try a different path.';
+    }
+}
+function a02Decode(){
+    const raw = document.getElementById('a02-b64').innerText;
+    try{
+        document.getElementById('a02-decoded').innerText = 'Decoded: ' + atob(raw);
+    }catch(e){
+        document.getElementById('a02-decoded').innerText = 'Decode failed.';
+    }
+}
+
+/* ---------------- A03 Injection ---------------- */
+function a03Check(e){
+    e.preventDefault();
+    const val = document.getElementById('a03-issue').value;
+    // Broad detection covering common injection families: SQLi, NoSQLi, XSS,
+    // command injection, LDAP injection, template injection, path traversal.
+    const pattern = /('|"|;|--|\bOR\b|\bAND\b|\bSELECT\b|\bUNION\b|\bDROP\b|\bINSERT\b|\bUPDATE\b|\bDELETE\b|\$where|\$ne|\$gt|<script|onerror=|onload=|javascript:|alert\(|\||&&|`|\$\(|\.\.\/|\{\{.*\}\}|\$\{.*\}|\*\)|\(\|)/i;
+    if(pattern.test(val)){
+        document.getElementById('a03-leak').style.display = 'block';
+        document.getElementById('a03-output').innerText = '';
+        markSolved('a03');
+    } else {
+        document.getElementById('a03-output').innerText = 'Form submitted normally — try an injection-style payload (SQLi, XSS, command injection, etc.).';
+    }
+    return false;
+}
+
+/* ---------------- A04 Insecure Design ---------------- */
+function a04RequestReset(){
+    document.getElementById('a04-reset-output').innerText = 'Reset link "sent" — no ownership/email verification performed.';
+    document.getElementById('a04-resetform-card').style.display = 'block';
+}
+function a04Reset(){
+    const p1 = document.getElementById('a04-newpass').value;
+    const p2 = document.getElementById('a04-confirmpass').value;
+    if(p1 && p1 === p2){
+        document.getElementById('a04-flag').style.display = 'block';
+        markSolved('a04');
+    } else {
+        alert('Passwords do not match.');
+    }
+}
+
+/* ---------------- A05 Security Misconfiguration ---------------- */
+function a05Nav(){
+    const val = document.getElementById('a05-url').value.trim().toLowerCase();
+    const out = document.getElementById('a05-output');
+    if(val.includes('/admin-console') || val.includes('/debug')){
+        out.innerText = 'Debug console reached:';
+        document.getElementById('a05-flag').style.display = 'block';
+        markSolved('a05');
+    } else {
+        out.innerText = '404 — page not found.';
+    }
+}
+
+/* ---------------- A06 Vulnerable & Outdated Components ---------------- */
+function a06Check(){
+    const val = document.getElementById('a06-select').value;
+    if(val === 'jquery'){
+        document.getElementById('a06-flag').style.display = 'block';
+        document.getElementById('a06-output').innerText = '';
+        markSolved('a06');
+    } else if(val){
+        document.getElementById('a06-output').innerText = 'Not quite — check each version against known CVE databases.';
+    }
+}
+
+/* ---------------- A07 Identification & Authentication Failures ---------------- */
+function a07Login(){
+    const u = document.getElementById('a07-user').value;
+    const p = document.getElementById('a07-pass').value;
+    if(u === 'abhishek' && p === 'abhishek123'){
+        document.getElementById('a07-step1').classList.remove('active');
+        document.getElementById('a07-step2').classList.add('active');
+    } else {
+        document.getElementById('a07-login-output').innerText = 'Invalid username or password.';
+    }
+}
+function a07Verify(){
+    const otp = document.getElementById('a07-otp').value.trim();
+    if(otp.length >= 4){
+        document.getElementById('a07-flag').style.display = 'block';
+        markSolved('a07');
+    } else {
+        alert('Enter at least 4 digits (any value works — that is the point).');
+    }
+}
+
+/* ---------------- A08 Software & Data Integrity Failures ---------------- */
+function a08Click(){
+    document.getElementById('a08-output').innerText = 'Redirecting to an unverified third-party download link (simulated — no file actually fetched)...';
+    document.getElementById('a08-flag').style.display = 'block';
+    markSolved('a08');
+}
+
+/* ---------------- A09 Logging & Monitoring Failures ---------------- */
+let a09Attempts = 0;
+function a09Login(){
+    const u = document.getElementById('a09-user').value;
+    const p = document.getElementById('a09-pass').value;
+    if(u === 'Anonymous' && p === 'Anonymous123'){
+        document.getElementById('a09-flag').style.display = 'block';
+        markSolved('a09');
+    } else {
+        a09Attempts++;
+        document.getElementById('a09-output').innerText = 'Invalid username or password.';
+        document.getElementById('a09-attempts').innerText = 'Failed attempts so far: ' + a09Attempts + ' (no lockout triggered, no alert raised)';
+    }
+}
+
+/* ---------------- A10 SSRF ---------------- */
+function a10Fetch(){
+    const val = document.getElementById('a10-url').value.trim().toLowerCase();
+    const out = document.getElementById('a10-output');
+    const leak = document.getElementById('a10-leak');
+
+    const internalPatterns = [
+        '127.0.0.1', 'localhost', '169.254.169.254', '0.0.0.0',
+        '10.', '192.168.', '172.16.', 'file://', '[::1]'
+    ];
+    const isInternal = internalPatterns.some(p => val.includes(p));
+
+    if(!val){
+        out.innerText = 'Enter a URL first.';
+        return;
+    }
+
+    if(isInternal){
+        out.innerText = 'Server fetched the URL on your behalf (simulated response below):';
+        let body = '-- simulated server-side fetch --\nGET ' + val + '\n\n';
+        if(val.includes('169.254.169.254')){
+            body += 'HTTP/1.1 200 OK\n{\n  "role": "internal-app-server",\n  "access_key": "AKIA-DEMO-EXAMPLE",\n  "secret_key": "demo-not-a-real-secret"\n}';
+        } else if(val.startsWith('file://')){
+            body += 'HTTP/1.1 200 OK\nroot:x:0:0:root:/root:/bin/bash\ndemo:x:1000:1000:demo:/home/demo:/bin/bash';
+        } else {
+            body += 'HTTP/1.1 200 OK\n{\n  "service": "internal-admin-panel",\n  "status": "reachable from outside intended network boundary"\n}';
+        }
+        leak.innerText = body;
+        leak.style.display = 'block';
+        document.getElementById('a10-flag').style.display = 'block';
+        markSolved('a10');
+    } else {
+        out.innerText = 'Fetched as a normal external image URL — nothing unusual here. Try an internal/private address instead.';
+        leak.style.display = 'none';
+    }
+}
+</script>
+</body>
+</html>
